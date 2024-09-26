@@ -1,0 +1,14 @@
+{
+  "name": "autoScript_Platform",
+  "version": "0.0.1",
+  "main": "index.js",
+  "author": "bayunche",
+  "license": "MIT",
+  "private": false,
+  "dependencies": {
+    "element-plus": "^2.8.3",
+    "pinia": "^2.2.2",
+    "pinia-plugin-persistedstate": "^4.0.2",
+    "vite": "^5.4.7"
+  }
+}
