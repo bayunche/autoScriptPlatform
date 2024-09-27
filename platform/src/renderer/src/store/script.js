@@ -45,6 +45,15 @@ const useScriptStore = defineStore({
         // 获取所有脚本
         getAllScripts() {
             return this.scripts;
+        },
+        // 更新脚本列表
+        updateScripts(scripts) {
+            this.scripts = scripts;
+        },
+        // 获取脚本运行状态)(true,false)
+        getScriptStatus(scriptName) {
+
+            return this.runningScripts.includes(scriptName);
         }
     }
 })

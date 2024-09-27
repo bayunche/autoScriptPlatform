@@ -8,7 +8,13 @@ const { scriptList, runningScripts } = storeToRefs(scriptStore)
 const stopedScripts = []
 
 if (!scriptList == []) {
-  stopedScripts = scriptList.filter((i) => !runningScripts.includes(i))
+  for (let i = 0; i < scriptList.value.length; i++) {
+    if (scriptList.value[i].status == 'running') {
+      runningScripts.value.push(scriptList.value[i])
+    } else {
+      stopedScripts.push(scriptList.value[i])
+    }
+  }
 }
 </script>
 

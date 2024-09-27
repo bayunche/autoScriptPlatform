@@ -12,13 +12,8 @@ import sidebars from './components/Sidebars.vue'
     </el-container>
     <el-container id="main">
       <sidebars></sidebars>
-      <el-container class="h-full">
-        <el-main class="min-h-full">
-          <el-scrollbar class="w-full min-h-full rounded-lg shadow" wrap-class="scrollbar-wrapper">
-            <!-- 滚动条包裹部分 -->
-            <RouterView class="flex grow w-full h-full bg-white rounded-md shadow" />
-          </el-scrollbar>
-        </el-main>
+      <el-container class="h-full ">
+        <Main></Main>
       </el-container>
     </el-container>
   </div>
@@ -28,7 +23,4 @@ import sidebars from './components/Sidebars.vue'
 #main {
   height: calc(100vh - 60px);
 }
- 
-
-
 </style>

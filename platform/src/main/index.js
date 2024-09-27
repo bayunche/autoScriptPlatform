@@ -89,3 +89,39 @@ ipcMain.on('run-script', (event, scriptPath) => {
     console.log('子线程退出，退出码：', code)
   })
 })
+
+//监听渲染进程的事件，调用dialog获取文件夹信息
+ipcMain.handle('open-directory-dialog', async (event) => {
+  console.log('open-directory-dialog')
+  const { dialog } = require('electron')
+  try {
+    const result =await dialog.showOpenDialog({
+      properties: ['openDirectory']
+    })
+    return result.filePaths[0]
+  } catch (error) {
+    console.log(error)
+  }
+})
+
+//监听渲染进程的事件,从渲染进程中获取到本地文件夹路径，遍历获取文件夹中的文件名称
+//组成文件名称,文件路径对象数组 ，返回给渲染进程
+
+ipcMain.handle('get-script-list', async (event, dirPath) => {
+  console.log('get-script-list')
+  const fs = require('fs')
+  const path = require('path')
+  try {
+    const files = fs.readdirSync(dirPath)
+    const scriptList = files.map((file) => {
+      return {
+        name: file,
+        path: path.join(dirPath, file),
+      }
+    })
+    return scriptList
+  }
+  catch (error) {
+    console.log(error)
+  }
+})

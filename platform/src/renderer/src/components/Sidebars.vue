@@ -3,7 +3,7 @@
 <template>
   <!-- 侧边栏组件 -->
   <el-aside class="sticky mt-5 rounded-lg border-1 bg-white shadow ml-5 sidebar mb-5" width="200px">
-    <el-scrollbar >
+    <el-scrollbar>
       <div>
         <el-menu default-active="/" router>
           <el-menu-item index="/">首页</el-menu-item>

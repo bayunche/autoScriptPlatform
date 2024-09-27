@@ -6,6 +6,7 @@ import { storeToRefs } from 'pinia'
 const Home = () => import('../view/Home.vue')
 const About = () => import('../view/About.vue')
 const Login = () => import('../view/Login.vue')
+const ScriptList = () => import('../view/ScriptList.vue')
 const routes = [
   {
     path: '/',
@@ -21,6 +22,11 @@ const routes = [
     path: '/login',
     name: 'Login',
     component: Login
+  },
+  {
+    path: '/scriptList',
+    name: 'ScriptList',
+    component:ScriptList
   }
   //   {
   //     path: '/register',
@@ -41,13 +47,17 @@ router.beforeEach((to, from, next) => {
   const userStore = useUserStore()
   const { user } = storeToRefs(userStore)
   console.log(to.path==='/about')
-  if (to.path === '/login' || to.path === '/register'|| to.path === '/about' || to.path === '/') {
-    next()
-  } else {
-    if (!user.value.token=='') {
-      next()
-    } else {
-      next('/login')
-    }
+  next()
+  if (to.path==='/Login') {
+    next("/")
   }
+  // if (to.path === '/login' || to.path === '/register'|| to.path === '/about' || to.path === '/') {
+  //   next()
+  // } else {
+  //   if (!user.value.token=='') {
+  //     next()
+  //   } else {
+  //     next('/login')
+  //   }
+  // }
 })

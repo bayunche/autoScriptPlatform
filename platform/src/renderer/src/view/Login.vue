@@ -27,7 +27,7 @@ const login = () => {
 }
 </script>
 <template>
-  <div class="flex flex-col items-center h-full ">
+  <div class="flex grow flex-col items-center  ">
     <div class="p-10 text-4xl text-slate-500 font-bold">Login</div>
     <el-form label-suffix="：" class="min-w-[250px]" :model="form" label-width="">
       <el-form-item label="邮箱">

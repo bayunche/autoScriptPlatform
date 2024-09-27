@@ -34,7 +34,7 @@ const logout = () => {
     >
       <!-- icon -->
       <div class="p-5 flex items-center">
-        <h1 class="text-2xl font-bold">Platform</h1>
+        <h1 class="text-2xl text-slate-700 font-bold">Platform </h1>
       </div>
       <div class="relative ml-auto lg:flex flex items-center">
         <!-- i18n切换按钮 -->
