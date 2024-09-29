@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4a90e2;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#50e3c2;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- 背景云朵 -->
+  <path d="M40 100 Q50 70 80 70 Q95 70 105 80 Q115 60 140 60 Q170 60 180 90 Q190 110 170 130 Q150 150 80 150 Q50 150 40 130 Q30 110 40 100" fill="url(#grad1)"/>
+  
+  <!-- 文件图标 -->
+  <rect x="70" y="85" width="60" height="70" fill="white" />
+  <path d="M70 85 L70 155 L130 155 L130 105 L110 85 Z" fill="#f0f0f0" />
+  <path d="M110 85 L110 105 L130 105 Z" fill="#e0e0e0" />
+  
+  <!-- 齿轮 -->
+  <circle cx="100" cy="120" r="15" fill="#d0d0d0" />
+  <circle cx="100" cy="120" r="10" fill="#f0f0f0" />
+  <g fill="#d0d0d0">
+    <rect x="98" y="100" width="4" height="10" />
+    <rect x="98" y="130" width="4" height="10" />
+    <rect x="80" y="118" width="10" height="4" />
+    <rect x="110" y="118" width="10" height="4" />
+  </g>
+  
+  <!-- 代码符号 -->
+  <text x="80" y="105" font-family="monospace" font-size="14" fill="#4a90e2">{}</text>
+  
+  <!-- 流动效果 -->
+  <path d="M40 130 Q60 140 80 130 Q100 120 120 130 Q140 140 160 130" fill="none" stroke="#50e3c2" stroke-width="2" />
+  <path d="M45 140 Q65 150 85 140 Q105 130 125 140 Q145 150 165 140" fill="none" stroke="#4a90e2" stroke-width="2" />
+</svg>

@@ -7,6 +7,7 @@ const Home = () => import('../view/Home.vue')
 const About = () => import('../view/About.vue')
 const Login = () => import('../view/Login.vue')
 const ScriptList = () => import('../view/ScriptList.vue')
+const scriptView = () => import('../view/ScriptView.vue')
 const routes = [
   {
     path: '/',
@@ -26,7 +27,12 @@ const routes = [
   {
     path: '/scriptList',
     name: 'ScriptList',
-    component:ScriptList
+    component: ScriptList
+  },
+  {
+    path: '/scriptView',
+    name: 'ScriptView',
+    component: scriptView
   }
   //   {
   //     path: '/register',
@@ -46,10 +52,10 @@ export default router
 router.beforeEach((to, from, next) => {
   const userStore = useUserStore()
   const { user } = storeToRefs(userStore)
-  console.log(to.path==='/about')
+  console.log(to.path === '/about')
   next()
-  if (to.path==='/Login') {
-    next("/")
+  if (to.path === '/Login') {
+    next('/')
   }
   // if (to.path === '/login' || to.path === '/register'|| to.path === '/about' || to.path === '/') {
   //   next()

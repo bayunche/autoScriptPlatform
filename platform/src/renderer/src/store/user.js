@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { persist } from '.'
 
 const useUserStore = defineStore('user', {
   state: () => ({
@@ -46,6 +47,6 @@ const useUserStore = defineStore('user', {
       this.user.email = email
     }
   },
-  persist: true // 持久化存储
+  persist: persist// 持久化存储
 })
 export { useUserStore }

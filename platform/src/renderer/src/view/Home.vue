@@ -4,17 +4,17 @@ import { useScriptStore } from '../store'
 
 const scriptStore = useScriptStore()
 
-const { scriptList, runningScripts } = storeToRefs(scriptStore)
+const { scripts, runningScripts } = scriptStore
 const stopedScripts = []
-
-if (!scriptList == []) {
-  for (let i = 0; i < scriptList.value.length; i++) {
-    if (scriptList.value[i].status == 'running') {
-      runningScripts.value.push(scriptList.value[i])
+console.log()
+if (!scripts.length===0) {
+  scripts.forEach((i) => {
+    if (i.status === true) {
+      runningScripts.push(i)
     } else {
-      stopedScripts.push(scriptList.value[i])
+      stopedScripts.push(i)
     }
-  }
+  })
 }
 </script>
 
@@ -28,7 +28,7 @@ if (!scriptList == []) {
         <el-empty description="暂无数据" :image-size="100"></el-empty>
       </div>
       <el-space wrap>
-        <el-card v-for="i in scriptList" :key="i" class="max-w-[240px] max-h-[200px] text-black">
+        <el-card v-for="i in scripts" :key="i" class="max-w-[240px] max-h-[200px] text-black">
           <template #header>
             <div class="card-header">
               <span>Card name</span>

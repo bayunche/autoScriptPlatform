@@ -1,8 +1,10 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, ipcRenderer } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
-import icon from '../../resources/icon.png?asset'
-
+import icon from '../../resources/icon.svg'
+import { dir } from 'console'
+const fs = require('fs')
+const path = require('path')
 function createWindow() {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
@@ -33,6 +35,27 @@ function createWindow() {
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
+
+  //启动新的子线程来运行本地js脚本（捕获脚本的log或者错误）
+  // const { ipcMain } = require('electron')
+  ipcMain.handle('run-script', (event, scriptPath) => {
+    const { fork } = require('child_process')
+    const child = fork(scriptPath)
+    //将运行状态和log返回给渲染进程
+    mainWindow.webContents.send('script-running', true)
+    console.log('成功将运行状态返回给渲染进程')
+    child.on('message', (message) => {
+      mainWindow.webContents.send('script-log', message)
+    })
+    child.on('error', (error) => {
+      mainWindow.webContents.send('script-error', error)
+      console.error(error)
+    })
+    child.on('exit', (code) => {
+      mainWindow.webContents.send('script-exit', false)
+      console.log(`子进程退出，退出码 ${code}`)
+    })
+  })
 }
 
 // This method will be called when Electron has finished
@@ -73,29 +96,12 @@ app.on('window-all-closed', () => {
 // In this file you can include the rest of your app"s specific main process
 // code. You can also put them in separate files and require them here.
 
-//启动新的子线程来运行本地js脚本（捕获脚本的log或者错误）
-// const { ipcMain } = require('electron')
-ipcMain.on('run-script', (event, scriptPath) => {
-  const { fork } = require('child_process')
-  const child = fork(scriptPath)
-  //返回给调用者
-  child.on('message', (msg) => {
-    event.reply('script-output', msg)
-  })
-  child.on('error', (err) => {
-    event.reply('script-error', err)
-  })
-  child.on('exit', (code) => {
-    console.log('子线程退出，退出码：', code)
-  })
-})
-
 //监听渲染进程的事件，调用dialog获取文件夹信息
 ipcMain.handle('open-directory-dialog', async (event) => {
   console.log('open-directory-dialog')
   const { dialog } = require('electron')
   try {
-    const result =await dialog.showOpenDialog({
+    const result = await dialog.showOpenDialog({
       properties: ['openDirectory']
     })
     return result.filePaths[0]
@@ -104,24 +110,57 @@ ipcMain.handle('open-directory-dialog', async (event) => {
   }
 })
 
-//监听渲染进程的事件,从渲染进程中获取到本地文件夹路径，遍历获取文件夹中的文件名称
+//监听渲染进程的事件,从渲染进程中获取到本地文件夹路径，遍历获取文件夹中的js文件名称(过滤node_modules、.git文件夹)
 //组成文件名称,文件路径对象数组 ，返回给渲染进程
 
 ipcMain.handle('get-script-list', async (event, dirPath) => {
   console.log('get-script-list')
-  const fs = require('fs')
-  const path = require('path')
-  try {
+
+  const getJSFiles = (dirPath) => {
+    let jsFiles = []
+
+    // 读取目录内容
     const files = fs.readdirSync(dirPath)
-    const scriptList = files.map((file) => {
-      return {
-        name: file,
-        path: path.join(dirPath, file),
+
+    for (const file of files) {
+      const filePath = path.join(dirPath, file)
+      const stat = fs.statSync(filePath)
+
+      if (stat.isDirectory()) {
+        // 如果是目录，递归调用
+        if (file !== 'node_modules' && file !== '.git') {
+          if (file !== 'dist') {
+            jsFiles = jsFiles.concat(getJSFiles(filePath))
+          }
+        }
+      } else if (path.extname(file).toLowerCase() === '.js') {
+        // 如果是 JS 文件，添加包含路径和名称的对象到结果数组
+        jsFiles.push({
+          path: filePath,
+          name: file
+        })
       }
-    })
-    return scriptList
+    }
+
+    return jsFiles
   }
-  catch (error) {
+  try {
+    // const files = fs.readdirSync(dirPath)
+    // 深度查找所有的js文件
+    const scriptList = getJSFiles(dirPath)
+    return scriptList
+  } catch (error) {
     console.log(error)
+  }
+})
+ipcMain.handle('read-file', async (event, filePath) => {
+  try {
+    let fs = require('fs').promises // 确保使用 fs.promises
+    const bufferContent = await fs.readFile(filePath, () => {}, { encoding: 'utf8' })
+    const content = bufferContent.toString('utf-8')
+    return content
+  } catch (error) {
+    console.error('Error reading file:', error)
+    throw error // 处理错误
   }
 })
