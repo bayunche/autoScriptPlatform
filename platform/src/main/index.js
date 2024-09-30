@@ -164,3 +164,15 @@ ipcMain.handle('read-file', async (event, filePath) => {
     throw error // 处理错误
   }
 })
+//修改后的脚本内容保存到本地
+
+ipcMain.handle('save-script', async (event, filePath, content) => {
+  try {
+    let fs = require('fs').promises // 确保使用 fs.promises
+    await fs.writeFile(filePath, content, 'utf8')
+    return true
+  } catch (error) {
+    console.error('Error writing file:', error)
+    throw error // 处理错误 
+  }
+})

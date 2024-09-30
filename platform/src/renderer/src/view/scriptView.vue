@@ -37,7 +37,7 @@
       <el-button type="primary" @click="handleSaveScript" plain>保存</el-button>
     </div>
     <el-divider></el-divider>
-    <div class="flex flex-row items-center">
+    <div class="flex flex-row items-center h-full">
       <JsEditor v-model="data.scriptContent" :language="'javascript'" :theme="'vs-dark'"></JsEditor>
     </div>
   </div>
@@ -45,6 +45,8 @@
 
 <script setup>
 import { useScriptStore } from '../store'
+import { useRouter } from 'vue-router'
+const router = useRouter()
 const scriptStore = useScriptStore()
 const data = scriptStore.script
 const running = ref(data.scriptStatus)
@@ -62,22 +64,25 @@ getScriptContent()
 const handleRunScript = async () => {
   onRunning.value = true
   running.value = true
+  scriptStore.runScript(data.scriptName)
   //调用主线程运行脚本
   await window.electron.ipcRenderer.invoke('run-script', data.scriptPath)
   //   渲染线程监听运行状态
   onRunning.value = false
-   scriptStore.runScript(data.scriptName)
+  scriptStore.runScript(data.scriptName)
   await window.electron.ipcRenderer.on('script-exit', (event, message) => {
     data.scriptStatus = false
     running.value = false
     console.log('脚本运行结束')
     onRunning.value = false
+    scriptStore.scriptEnd(data.scriptName)
   })
 }
 
 const handleStopScript = async () => {
   onStoping.value = true
   await window.electron.ipcRenderer.invoke('stop-script')
+  scriptStore.scriptEnd(data.scriptName)
   onStoping.value = false
 }
 const handleSaveScript = async () => {
@@ -90,5 +95,6 @@ const handleSaveScript = async () => {
   if (saveStatus) {
     onSaving.value = false
   }
+  console.log(saveStatus)
 }
 </script>

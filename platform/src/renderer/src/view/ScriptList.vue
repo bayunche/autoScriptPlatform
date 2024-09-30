@@ -22,12 +22,17 @@
         shadow="hover"
         v-for="script in data.scriptList"
         :key="script"
-        class="w-1/6"
-      > 
-        <div class="text-dark"><h6 class="font-bold text-xl" style="color:#8c98a4">脚本名称：{{ script.name }}</h6></div>
-        <div class="text-dark"><span class="font-bold text-lg">脚本路径：{{ script.path }}</span></div>
+        class="rounded-lg"
+        body-style="max-width:220px; max-height:px;  overflow:hidden; border-radius:10px; cursor:pointer"
+      >
+        <div class="text-dark">
+          <h6 class="font-bold" style="color: #8c98a4">脚本名称：{{ script.name }}</h6>
+        </div>
+        <div class="text-dark">
+          <h6 class="font-bold">脚本路径：{{ script.path }}</h6>
+        </div>
         <div>
-          <span class="font-bold text-lg">脚本状态：</span>
+          <span class="font-bold">脚本状态：</span>
           <el-tag :type="script.status === true ? 'success' : 'danger'">{{
             script.status == true ? '运行中' : '未运行'
           }}</el-tag>
@@ -39,8 +44,8 @@
 
 <script setup>
 import { reactive } from 'vue'
-import { useRouter } from 'vue-router'
 import { useScriptStore } from '../store'
+import { useRouter } from 'vue-router'
 const scriptStore = useScriptStore()
 const router = useRouter()
 const data = reactive({
@@ -52,6 +57,9 @@ const data = reactive({
 const openDialog = () => {
   window.electron.ipcRenderer.invoke('open-directory-dialog').then(async (res) => {
     console.log(res)
+    if (res == '') {
+      return
+    }
     data.scriptDirectory = res
     scriptStore.updateScriptDirectory(res)
     await getScriptList()
@@ -65,7 +73,7 @@ const getScriptList = async () => {
     'get-script-list',
     scriptStore.scriptDirectory
   )
-  
+
   scriptStore.updateScripts(scriptList)
   console.log(scriptList)
   await getScriptStatus(scriptList)
@@ -78,7 +86,6 @@ const getScriptStatus = async (scriptList) => {
     return i
   })
   data.scriptList = scriptListWithStatus
-
 }
 getScriptList()
 const handleView = (script) => {
@@ -93,3 +100,4 @@ const handleView = (script) => {
 </script>
 
 <script></script>
+<style scoped></style>
