@@ -28,13 +28,13 @@ const logout = () => {
 
 <template>
   <!-- header组件 -->
-  <el-header class="sticky w-screen z-10">
+  <el-header height="" class="sticky w-screen z-10">
     <div
       class="border-1 rounded-lg flex items-center bg-white flex-row shadow flex-end justify-end"
     >
       <!-- icon -->
       <div class="p-5 flex items-center">
-        <h1 class="text-2xl text-slate-700 font-bold">Platform </h1>
+        <h1 class="text-2xl text-slate-700 font-bold">Platform</h1>
       </div>
       <div class="relative ml-auto lg:flex flex items-center">
         <!-- i18n切换按钮 -->

@@ -43,7 +43,7 @@
 </template>
 
 <script setup>
-import { reactive } from 'vue'
+import { reactive, onMounted } from 'vue'
 import { useScriptStore } from '../store'
 import { useRouter } from 'vue-router'
 const scriptStore = useScriptStore()
@@ -75,7 +75,7 @@ const getScriptList = async () => {
   )
 
   scriptStore.updateScripts(scriptList)
-  console.log(scriptList)
+
   await getScriptStatus(scriptList)
 }
 //获取脚本列表的脚本运行状态并添加至script数组中
@@ -87,7 +87,7 @@ const getScriptStatus = async (scriptList) => {
   })
   data.scriptList = scriptListWithStatus
 }
-getScriptList()
+
 const handleView = (script) => {
   const scriptData = {
     scriptName: script.name,
@@ -97,6 +97,9 @@ const handleView = (script) => {
   scriptStore.addScript(scriptData)
   router.push('/scriptView')
 }
+onMounted(() => {
+  getScriptList()
+})
 </script>
 
 <script></script>

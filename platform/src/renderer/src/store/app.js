@@ -1,6 +1,7 @@
 const useAppStore = defineStore('app', {
   state: () => ({
-    appVersion: ''
+    appVersion: '',
+    loacle: 'zh-CN',
   }),
   actions: {
     async fetchAppVersion() {

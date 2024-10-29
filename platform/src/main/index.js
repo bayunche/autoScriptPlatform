@@ -1,11 +1,13 @@
-import { app, shell, BrowserWindow, ipcMain, ipcRenderer } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, ipcRenderer, utilityProcess, Menu } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.svg'
-import { dir } from 'console'
+import dayjs from 'dayjs'
+
 const fs = require('fs')
 const path = require('path')
 function createWindow() {
+  Menu.setApplicationMenu(null)
   // Create the browser window.
   const mainWindow = new BrowserWindow({
     width: 900,
@@ -36,25 +38,76 @@ function createWindow() {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
 
-  //启动新的子线程来运行本地js脚本（捕获脚本的log或者错误）
-  // const { ipcMain } = require('electron')
+  //启动新的子线程来运行本地js脚本
+  //捕获脚本的log并保存在脚本路径
+  // 捕获脚本的运行状态包括错误
   ipcMain.handle('run-script', (event, scriptPath) => {
-    const { fork } = require('child_process')
-    const child = fork(scriptPath)
-    //将运行状态和log返回给渲染进程
+    const { fork } = utilityProcess
+    const child = fork(scriptPath, [], { stdio: 'pipe' })
+    //将运行状态返回给渲染进程
     mainWindow.webContents.send('script-running', true)
     console.log('成功将运行状态返回给渲染进程')
+    // 将子进程的输出日志流式保存至文件
+    // 文件路径为脚本路径加上时间戳加上.log后缀
+    const logPath = app.getAppPath() + '-' + dayjs().format('YYYY-MM-DD_HH-mm-ss') + '.log'
+    const logStream = fs.createWriteStream(logPath, { flags: 'a' })
+
+    // 将子进程的运行状态返回给渲染进程
     child.on('message', (message) => {
-      mainWindow.webContents.send('script-log', message)
+      if (message.type === 'console') {
+        const logEntry = `[${message.timestamp}] [${message.level}] ${message.content}\n`
+        logStream.write(logEntry)
+      }
+      mainWindow.webContents.send('script-message', message)
+      console.log(message)
     })
+
     child.on('error', (error) => {
       mainWindow.webContents.send('script-error', error)
+      // 将错误保存到脚本路径
+      const errorPath = scriptPath + '-' + dayjs().format('YYYY-MM-DD_HH-mm-ss') + '.error'
+      fs.appendFile(errorPath, error, (err) => {
+        if (err) {
+          console.error('Failed to save error:', err)
+        } else {
+          console.log('Error saved to', errorPath)
+        }
+      })
       console.error(error)
     })
     child.on('exit', (code) => {
       mainWindow.webContents.send('script-exit', false)
       console.log(`子进程退出，退出码 ${code}`)
     })
+  })
+  // 解析日志文件，将日志内容返回给渲染进程
+  ipcMain.handle('get-logs', async (event, filePath) => {
+    try {
+      const logs = await fs.promises.readFile(filePath, 'utf-8')
+      return logs
+        .split('\n')
+        .filter(Boolean)
+        .map((line) => {
+          try {
+            // 解析日志行
+            const match = line.match(/\[(.*?)\] \[(.*?)\] (.*)/)
+            if (match) {
+              return {
+                timestamp: match[1],
+                level: match[2],
+                content: match[3]
+              }
+            }
+            return null
+          } catch (e) {
+            return null
+          }
+        })
+        .filter(Boolean)
+    } catch (err) {
+      console.error('Error reading logs:', err)
+      return []
+    }
   })
 }
 
@@ -173,6 +226,24 @@ ipcMain.handle('save-script', async (event, filePath, content) => {
     return true
   } catch (error) {
     console.error('Error writing file:', error)
-    throw error // 处理错误 
+
+    return false
   }
+})
+
+//监听渲染进程的事件，获取传入的脚本路径中文件夹的最新log文件，返回给渲染进程
+// @params scriptPath 脚本路径
+ipcMain.handle('get-log-file', async (event, scriptPath) => {
+  const dirPath = path.dirname(scriptPath)
+  //获取文件夹中的所有log文件
+  const files = fs.readdirSync(dirPath)
+  // 利用修改时间筛选出最新的log文件
+  const logFiles = files.filter((file) => path.extname(file).toLowerCase() === '.log')
+  const latestLogFile = logFiles.sort(
+    (a, b) =>
+      fs.statSync(path.join(dirPath, b)).mtime.getTime() -
+      fs.statSync(path.join(dirPath, a)).mtime.getTime()
+  )[0]
+  // 返回文件内容
+  return latestLogFile
 })

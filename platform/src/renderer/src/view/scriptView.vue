@@ -33,7 +33,7 @@
         :disabled="!running"
         >停止</el-button
       >
-      <el-button type="primary" plain>日志</el-button>
+      <el-button type="primary" @click="handleLogScript" plain>日志</el-button>
       <el-button type="primary" @click="handleSaveScript" plain>保存</el-button>
     </div>
     <el-divider></el-divider>
@@ -46,6 +46,10 @@
 <script setup>
 import { useScriptStore } from '../store'
 import { useRouter } from 'vue-router'
+import { ElMessage, ElNotification } from 'element-plus'
+import 'element-plus/es/components/message/style/css'
+import 'element-plus/es/components/notification/style/css'
+
 const router = useRouter()
 const scriptStore = useScriptStore()
 const data = scriptStore.script
@@ -68,7 +72,16 @@ const handleRunScript = async () => {
   //调用主线程运行脚本
   await window.electron.ipcRenderer.invoke('run-script', data.scriptPath)
   //   渲染线程监听运行状态
-  onRunning.value = false
+  await window.electron.ipcRenderer.on('script-running', (event, message) => {
+    data.scriptStatus = true
+    running.value = true
+    console.log('脚本运行中')
+    onRunning.value = false
+    ElMessage.success({
+      message: '脚本运行成功'
+    })
+  })
+
   scriptStore.runScript(data.scriptName)
   await window.electron.ipcRenderer.on('script-exit', (event, message) => {
     data.scriptStatus = false
@@ -92,9 +105,26 @@ const handleSaveScript = async () => {
     data.scriptPath,
     data.scriptContent
   )
+
   if (saveStatus) {
     onSaving.value = false
+    // ElNotification({
+    //   title: '保存成功',
+    //   message: `保存成功，路径：${data.scriptPath}`,
+    //   type: 'success'
+    // })
+    ElMessage({
+      message: `保存成功，路径：${data.scriptPath}`,
+      type: 'success'
+    })
+  } else {
+    ElMessage.error({
+      message: `保存失败`
+    })
   }
   console.log(saveStatus)
+}
+const handleLogScript = async () => {
+  router.push('/logView')
 }
 </script>
