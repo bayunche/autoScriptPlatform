@@ -9,6 +9,7 @@ const Login = () => import('../view/Login.vue')
 const ScriptList = () => import('../view/ScriptList.vue')
 const scriptView = () => import('../view/ScriptView.vue')
 const Log = () => import('../view/Log.vue')
+const chat = () => import('../view/DeepSeekChatView.vue')
 const routes = [
   {
     path: '/',
@@ -39,6 +40,11 @@ const routes = [
     path: '/Log',
     name: 'Log',
     component: Log
+  },
+  {
+    path: '/chat',
+    name: 'chat',
+    component: chat
   }
 ]
 

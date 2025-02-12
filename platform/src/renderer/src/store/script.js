@@ -100,4 +100,24 @@ const useScriptStore = defineStore({
     }
   }
 })
-export { useScriptStore }
+const chatStore = defineStore({
+  id: 'chat',
+  persist: false,
+  state:()=>(
+    {
+      chat:{
+        chatContent:[]
+      }
+    }
+  ),
+  actions:{
+    startChat(chatContent){
+    this.chat.chatContent.push(chatContent)
+    },
+    handleReceive(returnMessage){
+      this.chat.chatContent.push(returnMessage)
+    }
+    
+  }
+})
+export { useScriptStore,chatStore }

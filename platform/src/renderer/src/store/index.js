@@ -1,5 +1,6 @@
 import { useUserStore } from './user'
 import { useAppStore } from './app'
+import { chatStore } from './script'
 
 import { createPinia } from 'pinia'
 import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'
@@ -13,4 +14,4 @@ var persist=false
 if (process.env.NODE_ENV === 'production') {
     persist=true
 }
-export  {useUserStore,useAppStore, pinia,useScriptStore,persist}
+export  {useUserStore,useAppStore, pinia,useScriptStore,persist,chatStore}

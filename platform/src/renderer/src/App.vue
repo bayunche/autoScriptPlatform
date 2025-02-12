@@ -4,13 +4,12 @@
 import { ElConfigProvider } from 'element-plus'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import Layout from './Layout.vue'
-
 </script>
 
 <template>
-  <div class="app">
-    <el-config-provider :locale="zhCn">
+  <el-config-provider :locale="zhCn">
+    <div class="app">
       <Layout />
-    </el-config-provider>
-  </div>
+    </div>
+  </el-config-provider>
 </template>

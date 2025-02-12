@@ -8,9 +8,10 @@
         <el-menu default-active="/" router>
           <el-menu-item index="/">首页</el-menu-item>
           <el-menu-item index="/scriptList">脚本列表</el-menu-item>
-          <el-menu-item index="/log">日志</el-menu-item>
+          <el-menu-item index="/Log">日志</el-menu-item>
           <el-menu-item index="/settings">设置</el-menu-item>
           <el-menu-item index="/about">关于</el-menu-item>
+          <el-menu-item index="/chat">大模型对话</el-menu-item>
         </el-menu>
       </div>
     </el-scrollbar>

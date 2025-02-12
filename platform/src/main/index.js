@@ -3,9 +3,13 @@ import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.svg'
 import dayjs from 'dayjs'
+import OpenAi from 'openai'
+import { Readable } from 'stream'
 
 const fs = require('fs')
 const path = require('path')
+
+
 function createWindow() {
   Menu.setApplicationMenu(null)
   // Create the browser window.
@@ -14,7 +18,11 @@ function createWindow() {
     height: 670,
     show: false,
     autoHideMenuBar: true,
-    ...(process.platform === 'linux' ? { icon } : {}),
+    ...(process.platform === 'linux'
+      ? {
+          icon
+        }
+      : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false
@@ -27,7 +35,9 @@ function createWindow() {
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)
-    return { action: 'deny' }
+    return {
+      action: 'deny'
+    }
   })
 
   // HMR for renderer base on electron-vite cli.
@@ -43,14 +53,18 @@ function createWindow() {
   // 捕获脚本的运行状态包括错误
   ipcMain.handle('run-script', (event, scriptPath) => {
     const { fork } = utilityProcess
-    const child = fork(scriptPath, [], { stdio: 'pipe' })
+    const child = fork(scriptPath, [], {
+      stdio: 'pipe'
+    })
     //将运行状态返回给渲染进程
     mainWindow.webContents.send('script-running', true)
     console.log('成功将运行状态返回给渲染进程')
     // 将子进程的输出日志流式保存至文件
     // 文件路径为脚本路径加上时间戳加上.log后缀
     const logPath = app.getAppPath() + '-' + dayjs().format('YYYY-MM-DD_HH-mm-ss') + '.log'
-    const logStream = fs.createWriteStream(logPath, { flags: 'a' })
+    const logStream = fs.createWriteStream(logPath, {
+      flags: 'a'
+    })
 
     // 将子进程的运行状态返回给渲染进程
     child.on('message', (message) => {
@@ -209,7 +223,9 @@ ipcMain.handle('get-script-list', async (event, dirPath) => {
 ipcMain.handle('read-file', async (event, filePath) => {
   try {
     let fs = require('fs').promises // 确保使用 fs.promises
-    const bufferContent = await fs.readFile(filePath, () => {}, { encoding: 'utf8' })
+    const bufferContent = await fs.readFile(filePath, () => {}, {
+      encoding: 'utf8'
+    })
     const content = bufferContent.toString('utf-8')
     return content
   } catch (error) {
@@ -246,4 +262,76 @@ ipcMain.handle('get-log-file', async (event, scriptPath) => {
   )[0]
   // 返回文件内容
   return latestLogFile
+})
+
+// 监听渲染线程事件，将对话内容调用openai发送至模型
+
+ipcMain.handle('chat', async (event, chatContent) => {
+  console.log(chatContent)
+  const openAi = new OpenAi({
+    baseURL: 'https://api.deepseek.com',
+    apiKey: 'sk-2a40abce38a4469f804298dbd8a1fdfd'
+  })
+  console.log("start chat")
+  try {
+    const stream = await openAi.chat.completions.create({
+      messages: chatContent,
+      model: 'deepseek-chat',
+      stream: true
+    })
+
+    // 使用 stream.iterator() 方法获取迭代器
+    for await (const part of stream) {
+      const content = part.choices[0]?.delta?.content || ''
+      if (content) {
+        event.sender.send('chat-stream-chunk', content)
+      }
+    }
+
+    event.sender.send('chat-stream-end')
+    return {
+      status: 'completed'
+    }
+  } catch (error) {
+    console.error('Error:', error)
+    event.sender.send('chat-stream-error', error)
+    throw error
+  }
+})
+// 如果需要展示推理内容
+ipcMain.handle('chat-reasoner', async (event, chatContent) => {
+  console.log(chatContent)
+  const openAi = new OpenAi({
+    baseURL: 'https://api.deepseek.com',
+    apiKey: 'sk-2a40abce38a4469f804298dbd8a1fdfd'
+  })
+  console.log("start chat and reasoner")
+  try {
+    const stream = await openAi.chat.completions.create({
+      messages: chatContent,
+      model: 'deepseek-reasoner',
+      stream: true
+    })
+
+    // 使用 stream.iterator() 方法获取迭代器
+    for await (const part of stream) {
+      const reasoning_content = part.choices[0]?.delta?.reasoning_content || ''
+      const content = part.choices[0].delta.content || ''
+      if (reasoning_content) {
+        event.sender.send('chat-stream-reasoning_content', reasoning_content)
+      }
+      if (content) {
+        event.sender.send('chat-stream-content', content)
+      }
+    }
+
+    event.sender.send('chat-stream-end')
+    return {
+      status: 'completed'
+    }
+  } catch (error) {
+    console.error('Error:', error)
+    event.sender.send('chat-stream-error', error)
+    throw error
+  }
 })

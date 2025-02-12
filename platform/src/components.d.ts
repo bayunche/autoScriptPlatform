@@ -30,6 +30,7 @@ declare module 'vue' {
     ElPageHeader: typeof import('element-plus/es')['ElPageHeader']
     ElScrollbar: typeof import('element-plus/es')['ElScrollbar']
     ElSpace: typeof import('element-plus/es')['ElSpace']
+    ElSwitch: typeof import('element-plus/es')['ElSwitch']
     ElTag: typeof import('element-plus/es')['ElTag']
     JsEditor: typeof import('./renderer/src/components/JsEditor.vue')['default']
     Main: typeof import('./renderer/src/components/Main.vue')['default']
