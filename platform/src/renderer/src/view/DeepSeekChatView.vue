@@ -19,7 +19,7 @@
           <!-- 用户消息在右边 -->
           <template v-if="message.role === 'user'">
             <div
-              class="from-bg-300 to p-2 rounded-lg shadow-md max-w-[70%] sm:max-w-xl break-words p-4"
+              class="from-bg-300 from-50% to-bg-400 rounded-lg shadow-md max-w-[70%] sm:max-w-xl break-words p-4"
             >
               <div class="markdown-body" v-html="renderMarkdown(message.content || '')"></div>
             </div>
@@ -56,7 +56,7 @@
     </div>
 
     <!-- 输入框区域 -->
-    <div class="ml-8 mr- border bg-white shadow-md rounded-lg">
+    <div class="m-8 mt-0 border bg-white shadow-md rounded-lg">
       <div class="max-w-full sm:max-w-[900px] mx-auto p-4">
         <div class="flex flex-col sm:flex-row sm:items-center mb-2 text-sm text-gray-600">
           <el-checkbox v-model="data.isR1" class="mb-2 sm:mb-0"> 使用 R1 推理模型 </el-checkbox>
@@ -145,7 +145,10 @@ renderer.code = (code, language) => {
 // 段落渲染
 renderer.paragraph = (text) => {
   console.log(text)
-  return `<p class="markdown-paragraph">${text.text}</p>`
+  return `
+  
+  <p class="markdown-paragraph whitespace-pre-wrap break-words">${text.text}</p>
+ `
 }
 
 // 配置 marked 使用自定义渲染器
