@@ -13,7 +13,7 @@ function createWindow() {
   Menu.setApplicationMenu(null)
   // Create the browser window.
   const mainWindow = new BrowserWindow({
-    width: 900,
+    width: 1170,
     height: 670,
     show: false,
     autoHideMenuBar: true,
@@ -334,40 +334,89 @@ ipcMain.handle('chat-reasoner', async (event, chatContent) => {
     throw error
   }
 })
-// 调用本地模型
-ipcMain.handle('chat-local-reasoner', async (event, chatContent) => {
-  console.log(chatContent)
-  const openAi = new OpenAi({
-    baseURL: 'http://localhost:11434/v1/',
-    apiKey: 'ollama'
-  })
-  console.log('start local chat and reasoner')
+// 处理流式内容的函数
+async function processStreamContent(content, event, state) {
+  state.buffer += content;
+
+  while (true) {
+    if (!state.isInThinkTag) {
+      const thinkStart = state.buffer.indexOf('<think>');
+      if (thinkStart === -1) {
+        if (state.buffer) {
+          // 发送常规回复内容
+          event.sender.send('chat-stream-content', state.buffer);
+          state.buffer = '';
+        }
+        break;
+      } 
+    } else {
+      const thinkEnd = state.buffer.indexOf('</think>');
+      if (thinkEnd === -1) {
+        // 直接发送当前的思考内容
+        event.sender.send('chat-stream-reasoning_content', state.buffer);
+        state.buffer = '';
+        break;
+      } else {
+        // 发送think标签内的思考内容
+        event.sender.send('chat-stream-reasoning_content', state.buffer.substring(0, thinkEnd));
+        state.buffer = state.buffer.substring(thinkEnd + 8);
+        state.isInThinkTag = false;
+      }
+    }
+  }
+}
+
+// 主处理函数
+ipcMain.handle('chat-local-reasoner', async (event, chatContent, chatModel) => {
+  console.log('Starting local chat with model:', chatModel)
+
+  // 在函数内部创建状态对象
+  const state = {
+    buffer: '',
+    isInThinkTag: false,
+    thinkContent: ''
+  }
+
   try {
+    const openAi = new OpenAi({
+      baseURL: 'http://localhost:11434/v1/',
+      apiKey: 'ollama'
+    })
+
     const stream = await openAi.chat.completions.create({
       messages: chatContent,
-      model: 'deepseek-reasoner',
+      model: chatModel,
       stream: true
     })
 
-    // 使用 stream.iterator() 方法获取迭代器
     for await (const part of stream) {
-      const reasoning_content = part.choices[0]?.delta?.reasoning_content || ''
-      const content = part.choices[0].delta.content || ''
-      if (reasoning_content) {
-        event.sender.send('chat-stream-reasoning_content', reasoning_content)
-      }
-      if (content) {
-        event.sender.send('chat-stream-content', content)
+      const content = part.choices[0]?.delta?.content || ''
+      await processStreamContent(content, event, state)
+    }
+
+    // 处理剩余内容
+    if (state.buffer) {
+      if (state.isInThinkTag) {
+        const finalThinkContent = state.thinkContent + state.buffer
+        event.sender.send('chat-stream-reasoning_content', finalThinkContent)
+      } else {
+        event.sender.send('chat-stream-content', state.buffer)
       }
     }
 
     event.sender.send('chat-stream-end')
-    return {
-      status: 'completed'
-    }
+    return { status: 'completed' }
   } catch (error) {
-    console.error('Error:', error)
-    event.sender.send('chat-stream-error', error)
+    console.error('Local chat error:', error)
+
+    const errorMessage = {
+      message: error.message,
+      code: error.code,
+      type: error.type || 'UnknownError',
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    }
+
+    event.sender.send('chat-stream-error', errorMessage)
     throw error
   }
 })
@@ -377,7 +426,8 @@ ipcMain.handle('get-local-model-list', async (event) => {
     const response = await fetch('http://localhost:11434/v1/models')
     const data = await response.json()
     console.log(data)
-  } catch {
+    return data
+  } catch (error) {
     console.error('Error:', error)
     console.log('获取本地模型列表失败')
     return []

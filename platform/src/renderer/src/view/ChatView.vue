@@ -6,12 +6,7 @@
         <PageHeader header="大模型对话" />
         <div>
           <el-select v-model="usingModel" placeholder="请选择大模型">
-            <el-option
-              v-for="item in ableModel"
-              :label="item.modelName"
-              :value="item.modelDescription"
-              :key="item.index"
-            >
+            <el-option v-for="item in ableModel" :key="item.id" :label="item.id" :value="item.id">
             </el-option>
           </el-select>
         </div>
@@ -29,9 +24,7 @@
         >
           <!-- 用户消息在右边 -->
           <template v-if="message.role === 'user'">
-            <div
-              class="from-bg-300 from-50% to-bg-400 rounded-lg shadow-md max-w-[70%] sm:max-w-xl break-words p-4"
-            >
+            <div class="bg-gray-300 rounded-lg shadow-md max-w-[70%] sm:max-w-xl break-words p-4">
               <div class="markdown-body" v-html="renderMarkdown(message.content || '')"></div>
             </div>
             <div
@@ -48,14 +41,14 @@
               AI
             </div>
             <div
-              class="bg-gray-100 p-2 rounded-lg shadow-md max-w-[80%] sm:max-w-xl break-words p-4"
+              class="bg-gray-150 p-4 rounded-lg shadow-md max-w-[80%] sm:max-w-xl break-words p-4"
             >
               <div
                 v-if="message.role === 'assistant' && message.reasoning_content"
                 class="mb-2 text-gray-500 text-sm bg-[#f5f5f5]"
               >
                 <div
-                  class="markdown-body text-gray-500 text-sm bg-gray-200 p-2 rounded"
+                  class="markdown-body-resoner text-gray-500 text-sm bg-gray-150 p-2 rounded"
                   v-html="processStreamContent(message.reasoning_content)"
                 ></div>
               </div>
@@ -69,9 +62,6 @@
     <!-- 输入框区域 -->
     <div class="m-8 mt-0 border bg-white shadow-md rounded-lg">
       <div class="max-w-full sm:max-w-[900px] mx-auto p-4">
-        <div class="flex flex-col sm:flex-row sm:items-center mb-2 text-sm text-gray-600">
-          <el-checkbox v-model="data.isR1" class="mb-2 sm:mb-0"> 使用 R1 推理模型 </el-checkbox>
-        </div>
         <div
           class="flex flex-col sm:flex-row items-stretch space-y-2 sm:space-y-0 sm:space-x-4 bg-white rounded-lg border shadow-sm p-2"
         >
@@ -87,10 +77,10 @@
           <el-button
             type="primary"
             :disabled="!data.inputMessage.trim()"
-            @click="handleSend"
+            :icon="Search"
             class="h-[40px] px-6"
             :loading="data.loading"
-            :icon="Search"
+            @click="handleSend"
           >
           </el-button>
         </div>
@@ -99,13 +89,12 @@
   </div>
 </template>
 <script setup>
-import { reactive, ref, toRaw } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { chatStore, useConfigStore } from '../store'
+import { reactive, ref } from 'vue'
+import { useConfigStore } from '../store'
 import { marked } from 'marked'
 import hljs from 'highlight.js'
 import 'highlight.js/styles/stackoverflow-light.css'
-import { ElMessage } from 'element-plus'
+import { ElMessage, useModal } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
 
 const configStore = useConfigStore()
@@ -158,10 +147,7 @@ renderer.code = (code, language) => {
 }
 // 段落渲染
 renderer.paragraph = (text) => {
-  console.log(text)
-  return `
-  <p class="markdown-paragraph whitespace-pre-wrap break-words">${text.text}</p>
- `
+  return `<p class="markdown-paragraph whitespace-pre-wrap break-words">${text.text}</p>`
 }
 
 // 配置 marked 使用自定义渲染器
@@ -180,8 +166,6 @@ const processStreamContent = (content) => {
   // 分离代码块和普通文本
   const segments = []
   let currentPos = 0
-  let isInCodeBlock = false
-  let tempContent = ''
 
   // 处理代码块
   const codeBlockRegex = /```(\w*)\n([\s\S]*?)```/g
@@ -243,6 +227,12 @@ const renderMarkdown = (content) => {
     return escapeHtml(content)
   }
 }
+const data = reactive({
+  inputMessage: '',
+  messages: [],
+  loading: false,
+  isR1: false
+})
 // 复制代码功能
 window.copyCodeToClipboard = function (button) {
   const codeBlock = button.closest('.code-block-wrapper').querySelector('code')
@@ -287,19 +277,18 @@ window.copyCodeToClipboard = function (button) {
       })
   }
 }
-const usechatStore = chatStore()
-const router = useRouter()
-const data = reactive({
-  inputMessage: '',
-  messages: [],
-  loading: false,
-  isR1: false
-})
+
 const ableModel = ref(configStore.ableModel)
 const usingModel = ref(configStore.usingModel)
+const getLocalModel = async () => {
+  const res = await window.electron.ipcRenderer.invoke('get-local-model-list')
+  console.log(res)
+  ableModel.value = res.data
+}
+getLocalModel()
 const handleSend = () => {
-  console.log(data.isR1)
-  if (usingModel == null) {
+  console.log(usingModel.value == '')
+  if (usingModel.value == null || usingModel.value == undefined || usingModel.value == '') {
     ElMessage({
       message: '请选择模型',
       type: 'error'
@@ -308,71 +297,11 @@ const handleSend = () => {
   }
   sendMessageR1()
 }
-const sendMessage = async () => {
-  console.log('调用chat')
-  data.loading = true
-  const message = {
-    role: 'user',
-    content: data.inputMessage
-  }
-  data.messages.push(message) // 将用户消息添加到消息列表
-  console.log(data.messages)
 
-  try {
-    // 清空输入框
-    data.inputMessage = ''
-    // 添加一个占位符消息用于接收流式返回的内容
-    const assistantMessage = {
-      role: 'assistant',
-      content: '' // 初始内容为空
-    }
-    data.messages.push(assistantMessage)
-    // 清理监听器的函数
-    const cleanupListeners = () => {
-      window.electron.ipcRenderer.removeAllListeners('chat-stream-chunk')
-      window.electron.ipcRenderer.removeAllListeners('chat-stream-end')
-    }
-    // 监听流式返回的数据
-    window.electron.ipcRenderer.on('chat-stream-chunk', (event, chunk) => {
-      // 将流式返回的内容逐步追加到 assistant 的消息中
-      assistantMessage.content += chunk
-      // 触发 UI 更新（如果你的框架需要手动触发更新）
-      data.messages = [...data.messages]
-    })
-    // 监听流式返回结束事件
-    window.electron.ipcRenderer.once('chat-stream-end', () => {
-      data.loading = false // 结束加载状态
-      console.log('Stream ended')
-      cleanupListeners()
-      const lastMessage = data.messages[data.messages.length - 1]
-      if (lastMessage && (!lastMessage.content || lastMessage.content.trim() === '')) {
-        data.messages[data.messages.length - 1].content = `系统繁忙，请稍后再试`
-        // 确保 ElMessage 被正确导入和使用
-        ElMessage({
-          message: `请求超时,请重新发送您的问题`,
-          type: 'warning'
-        })
-        data.inputMessage = message.content
-      }
-    })
-
-    // 发送聊天内容到主线程
-    await window.electron.ipcRenderer.invoke('chat', JSON.parse(JSON.stringify(data.messages)))
-  } catch (e) {
-    console.log(e)
-    ElMessage({
-      message: e || `发送消息失败，请重试`,
-      type: 'error'
-    })
-    data.inputMessage = message.content // 恢复用户输入内容
-    data.loading = false
-  }
-}
 const sendMessageR1 = async () => {
   try {
     data.loading = true
     console.log('调用chat-local-reasoner')
-
     // 创建用户消息
     const userMessage = {
       role: 'user',
@@ -421,16 +350,19 @@ const sendMessageR1 = async () => {
       window.electron.ipcRenderer.removeAllListeners('chat-stream-end')
     }
 
-    // 处理推理内容流
     window.electron.ipcRenderer.on('chat-stream-reasoning_content', (_, chunk) => {
+      // 如果 displayMessage.content 不存在则初始化
       // 将推理内容添加到显示消息中
-      displayMessage.content += chunk
+      displayMessage.reasoning_content += chunk 
       // 触发响应式更新
       data.messages = [...data.messages]
     })
-
     // 处理实际回复内容流
     window.electron.ipcRenderer.on('chat-stream-content', (_, chunk) => {
+      // 如果 displayMessage.content 不存在则初始化
+      if (!displayMessage.content) {
+        displayMessage.content = ''
+      }
       // 更新显示消息的内容
       displayMessage.content += chunk
       // 触发响应式更新
@@ -445,6 +377,7 @@ const sendMessageR1 = async () => {
 
       // 检查最后一条消息
       const lastMessage = data.messages[data.messages.length - 1]
+      console.log(lastMessage)
       if (lastMessage && (!lastMessage.content || lastMessage.content.trim() === '')) {
         // 移除空消息
         data.messages[data.messages.length - 1].content = '系统繁忙，请稍后再试'
@@ -466,7 +399,11 @@ const sendMessageR1 = async () => {
     }))
 
     // 向主线程发送消息数组
-    await window.electron.ipcRenderer.invoke('chat-local-reasoner', cleanSendMessages)
+    await window.electron.ipcRenderer.invoke(
+      'chat-local-reasoner',
+      cleanSendMessages,
+      usingModel.value
+    )
   } catch (error) {
     console.error('聊天错误:', error)
     const lastMessage = data.messages[data.messages.length - 1]
@@ -486,7 +423,6 @@ const sendMessageR1 = async () => {
 .markdown-body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   line-height: 1.6;
-  color: #24292e;
 }
 
 .code-block-wrapper {
