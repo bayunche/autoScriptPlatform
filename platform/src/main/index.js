@@ -9,7 +9,6 @@ import { Readable } from 'stream'
 const fs = require('fs')
 const path = require('path')
 
-
 function createWindow() {
   Menu.setApplicationMenu(null)
   // Create the browser window.
@@ -272,7 +271,7 @@ ipcMain.handle('chat', async (event, chatContent) => {
     baseURL: 'https://api.deepseek.com',
     apiKey: 'sk-2a40abce38a4469f804298dbd8a1fdfd'
   })
-  console.log("start chat")
+  console.log('start chat')
   try {
     const stream = await openAi.chat.completions.create({
       messages: chatContent,
@@ -305,7 +304,7 @@ ipcMain.handle('chat-reasoner', async (event, chatContent) => {
     baseURL: 'https://api.deepseek.com',
     apiKey: 'sk-2a40abce38a4469f804298dbd8a1fdfd'
   })
-  console.log("start chat and reasoner")
+  console.log('start chat and reasoner')
   try {
     const stream = await openAi.chat.completions.create({
       messages: chatContent,
@@ -333,5 +332,54 @@ ipcMain.handle('chat-reasoner', async (event, chatContent) => {
     console.error('Error:', error)
     event.sender.send('chat-stream-error', error)
     throw error
+  }
+})
+// 调用本地模型
+ipcMain.handle('chat-local-reasoner', async (event, chatContent) => {
+  console.log(chatContent)
+  const openAi = new OpenAi({
+    baseURL: 'http://localhost:11434/v1/',
+    apiKey: 'ollama'
+  })
+  console.log('start local chat and reasoner')
+  try {
+    const stream = await openAi.chat.completions.create({
+      messages: chatContent,
+      model: 'deepseek-reasoner',
+      stream: true
+    })
+
+    // 使用 stream.iterator() 方法获取迭代器
+    for await (const part of stream) {
+      const reasoning_content = part.choices[0]?.delta?.reasoning_content || ''
+      const content = part.choices[0].delta.content || ''
+      if (reasoning_content) {
+        event.sender.send('chat-stream-reasoning_content', reasoning_content)
+      }
+      if (content) {
+        event.sender.send('chat-stream-content', content)
+      }
+    }
+
+    event.sender.send('chat-stream-end')
+    return {
+      status: 'completed'
+    }
+  } catch (error) {
+    console.error('Error:', error)
+    event.sender.send('chat-stream-error', error)
+    throw error
+  }
+})
+// 获取ollamo本地模型列表
+ipcMain.handle('get-local-model-list', async (event) => {
+  try {
+    const response = await fetch('http://localhost:11434/v1/models')
+    const data = await response.json()
+    console.log(data)
+  } catch {
+    console.error('Error:', error)
+    console.log('获取本地模型列表失败')
+    return []
   }
 })

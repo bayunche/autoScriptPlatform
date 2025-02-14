@@ -11,6 +11,7 @@
           <el-menu-item index="/Log">日志</el-menu-item>
           <el-menu-item index="/settings">设置</el-menu-item>
           <el-menu-item index="/about">关于</el-menu-item>
+          <el-menu-item index="/chatDeepSeek">deepseek对话</el-menu-item>
           <el-menu-item index="/chat">大模型对话</el-menu-item>
         </el-menu>
       </div>

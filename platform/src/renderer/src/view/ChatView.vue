@@ -3,9 +3,19 @@
     <!-- 头部 -->
     <div class="border-b bg-white shadow-sm">
       <div class="max-w-full mx-auto py-4 px-4 sm:px-6">
-        <PageHeader header="DeepSeek对话" />
+        <PageHeader header="大模型对话" />
+        <div>
+          <el-select v-model="usingModel" placeholder="请选择大模型">
+            <el-option
+              v-for="item in ableModel"
+              :label="item.modelName"
+              :value="item.modelDescription"
+              :key="item.index"
+            >
+            </el-option>
+          </el-select>
+        </div>
       </div>
-      <template> </template>
     </div>
 
     <!-- 聊天内容区域 -->
@@ -89,7 +99,7 @@
   </div>
 </template>
 <script setup>
-import { reactive, toRaw } from 'vue'
+import { reactive, ref, toRaw } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { chatStore, useConfigStore } from '../store'
 import { marked } from 'marked'
@@ -97,6 +107,7 @@ import hljs from 'highlight.js'
 import 'highlight.js/styles/stackoverflow-light.css'
 import { ElMessage } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
+
 const configStore = useConfigStore()
 
 // 安全的字符串转换函数
@@ -237,7 +248,7 @@ window.copyCodeToClipboard = function (button) {
   const codeBlock = button.closest('.code-block-wrapper').querySelector('code')
   const code = codeBlock.textContent
   // 使用通过 contextBridge 暴露的 API
-  if (window.electronAPI) {
+  if (window.electron.electronAPI) {
     window.electron.electronAPI
       .copyToClipboard(code)
       .then(() => {
@@ -282,18 +293,20 @@ const data = reactive({
   inputMessage: '',
   messages: [],
   loading: false,
-  isR1: false,
-  ableModel: configStore.ableModel,
-  usingModel: configStore.usingModel
+  isR1: false
 })
+const ableModel = ref(configStore.ableModel)
+const usingModel = ref(configStore.usingModel)
 const handleSend = () => {
   console.log(data.isR1)
-
-  if (data.isR1) {
-    sendMessageR1()
-  } else {
-    sendMessage()
+  if (usingModel == null) {
+    ElMessage({
+      message: '请选择模型',
+      type: 'error'
+    })
+    return
   }
+  sendMessageR1()
 }
 const sendMessage = async () => {
   console.log('调用chat')
@@ -358,7 +371,7 @@ const sendMessage = async () => {
 const sendMessageR1 = async () => {
   try {
     data.loading = true
-    console.log('调用r1')
+    console.log('调用chat-local-reasoner')
 
     // 创建用户消息
     const userMessage = {
@@ -453,7 +466,7 @@ const sendMessageR1 = async () => {
     }))
 
     // 向主线程发送消息数组
-    await window.electron.ipcRenderer.invoke('chat-reasoner', cleanSendMessages)
+    await window.electron.ipcRenderer.invoke('chat-local-reasoner', cleanSendMessages)
   } catch (error) {
     console.error('聊天错误:', error)
     const lastMessage = data.messages[data.messages.length - 1]
