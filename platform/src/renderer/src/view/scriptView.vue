@@ -108,11 +108,7 @@ const handleSaveScript = async () => {
 
   if (saveStatus) {
     onSaving.value = false
-    // ElNotification({
-    //   title: '保存成功',
-    //   message: `保存成功，路径：${data.scriptPath}`,
-    //   type: 'success'
-    // })
+    // 保存成功
     ElMessage({
       message: `保存成功，路径：${data.scriptPath}`,
       type: 'success'
