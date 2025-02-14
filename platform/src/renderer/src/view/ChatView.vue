@@ -141,7 +141,6 @@ renderer.code = (code, language) => {
       </div>
     `
   } catch (error) {
-    console.error('Code block rendering error:', error)
     return `<pre class="code-block"><code>${escapeHtml(code)}</code></pre>`
   }
 }
@@ -207,7 +206,6 @@ const processStreamContent = (content) => {
         try {
           return marked(segment.content)
         } catch (error) {
-          console.error('Text rendering error:', error)
           return `<p>${escapeHtml(segment.content)}</p>`
         }
       }
@@ -223,7 +221,6 @@ const renderMarkdown = (content) => {
     content = safeString(content)
     return marked(content)
   } catch (error) {
-    console.error('Markdown rendering error:', error)
     return escapeHtml(content)
   }
 }
@@ -282,12 +279,10 @@ const ableModel = ref(configStore.ableModel)
 const usingModel = ref(configStore.usingModel)
 const getLocalModel = async () => {
   const res = await window.electron.ipcRenderer.invoke('get-local-model-list')
-  console.log(res)
   ableModel.value = res.data
 }
 getLocalModel()
 const handleSend = () => {
-  console.log(usingModel.value == '')
   if (usingModel.value == null || usingModel.value == undefined || usingModel.value == '') {
     ElMessage({
       message: '请选择模型',
@@ -332,8 +327,6 @@ const sendMessageR1 = async () => {
     // 添加最新的用户消息，确保它是数组的最后一条消息
     sendMessages.push(userMessage)
 
-    // 验证发送的消息数组
-    console.log('发送前的消息数组:', sendMessages)
     // 确认最后一条是用户消息
     if (sendMessages[sendMessages.length - 1].role !== 'user') {
       throw new Error('最后一条消息必须是用户消息')
@@ -351,9 +344,12 @@ const sendMessageR1 = async () => {
     }
 
     window.electron.ipcRenderer.on('chat-stream-reasoning_content', (_, chunk) => {
-      // 如果 displayMessage.content 不存在则初始化
+      // 确保 displayMessage.reasoning_content 已初始化
+      if (!displayMessage.reasoning_content) {
+        displayMessage.reasoning_content = ''
+      }
       // 将推理内容添加到显示消息中
-      displayMessage.reasoning_content += chunk 
+      displayMessage.reasoning_content += chunk
       // 触发响应式更新
       data.messages = [...data.messages]
     })
@@ -377,7 +373,6 @@ const sendMessageR1 = async () => {
 
       // 检查最后一条消息
       const lastMessage = data.messages[data.messages.length - 1]
-      console.log(lastMessage)
       if (lastMessage && (!lastMessage.content || lastMessage.content.trim() === '')) {
         // 移除空消息
         data.messages[data.messages.length - 1].content = '系统繁忙，请稍后再试'
@@ -405,7 +400,6 @@ const sendMessageR1 = async () => {
       usingModel.value
     )
   } catch (error) {
-    console.error('聊天错误:', error)
     const lastMessage = data.messages[data.messages.length - 1]
     if (lastMessage && (!lastMessage.content || lastMessage.content.trim() === '')) {
       data.messages[data.messages.lastIndexOf].content = '发送消息失败'

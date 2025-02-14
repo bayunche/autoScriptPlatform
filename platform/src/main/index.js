@@ -336,31 +336,35 @@ ipcMain.handle('chat-reasoner', async (event, chatContent) => {
 })
 // 处理流式内容的函数
 async function processStreamContent(content, event, state) {
-  state.buffer += content;
+  state.buffer += content
 
   while (true) {
     if (!state.isInThinkTag) {
-      const thinkStart = state.buffer.indexOf('<think>');
+      const thinkStart = state.buffer.indexOf('<think>')
       if (thinkStart === -1) {
         if (state.buffer) {
           // 发送常规回复内容
-          event.sender.send('chat-stream-content', state.buffer);
-          state.buffer = '';
+          event.sender.send('chat-stream-content', state.buffer)
+          state.buffer = ''
         }
-        break;
-      } 
+        break
+      } else {
+        // 直接跳过think标签之前的常规回复内容
+        state.buffer = state.buffer.substring(thinkStart + 7)
+        state.isInThinkTag = true
+      }
     } else {
-      const thinkEnd = state.buffer.indexOf('</think>');
+      const thinkEnd = state.buffer.indexOf('</think>')
       if (thinkEnd === -1) {
         // 直接发送当前的思考内容
-        event.sender.send('chat-stream-reasoning_content', state.buffer);
-        state.buffer = '';
-        break;
+        event.sender.send('chat-stream-reasoning_content', state.buffer)
+        state.buffer = ''
+        break
       } else {
         // 发送think标签内的思考内容
-        event.sender.send('chat-stream-reasoning_content', state.buffer.substring(0, thinkEnd));
-        state.buffer = state.buffer.substring(thinkEnd + 8);
-        state.isInThinkTag = false;
+        event.sender.send('chat-stream-reasoning_content', state.buffer.substring(0, thinkEnd))
+        state.buffer = state.buffer.substring(thinkEnd + 8)
+        state.isInThinkTag = false
       }
     }
   }
@@ -369,7 +373,6 @@ async function processStreamContent(content, event, state) {
 // 主处理函数
 ipcMain.handle('chat-local-reasoner', async (event, chatContent, chatModel) => {
   console.log('Starting local chat with model:', chatModel)
-
   // 在函数内部创建状态对象
   const state = {
     buffer: '',
@@ -425,7 +428,6 @@ ipcMain.handle('get-local-model-list', async (event) => {
   try {
     const response = await fetch('http://localhost:11434/v1/models')
     const data = await response.json()
-    console.log(data)
     return data
   } catch (error) {
     console.error('Error:', error)
