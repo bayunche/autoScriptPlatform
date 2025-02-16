@@ -371,8 +371,9 @@ async function processStreamContent(content, event, state) {
 }
 
 // 主处理函数
-ipcMain.handle('chat-local-reasoner', async (event, chatContent, chatModel) => {
+ipcMain.handle('chat-local-reasoner', async (event, chatContent, chatModel,usingUrl,data) => {
   console.log('Starting local chat with model:', chatModel)
+  
   // 在函数内部创建状态对象
   const state = {
     buffer: '',
@@ -382,14 +383,16 @@ ipcMain.handle('chat-local-reasoner', async (event, chatContent, chatModel) => {
 
   try {
     const openAi = new OpenAi({
-      baseURL: 'http://localhost:11434/v1/',
-      apiKey: 'ollama'
+      baseURL: usingUrl,
+      apiKey: 'ollama',
     })
 
     const stream = await openAi.chat.completions.create({
       messages: chatContent,
       model: chatModel,
-      stream: true
+      stream: true,
+      temperature:data.temperature,
+      top_p:data.top_p,
     })
 
     for await (const part of stream) {
@@ -424,9 +427,9 @@ ipcMain.handle('chat-local-reasoner', async (event, chatContent, chatModel) => {
   }
 })
 // 获取ollamo本地模型列表
-ipcMain.handle('get-local-model-list', async (event) => {
+ipcMain.handle('get-local-model-list', async (event, url) => {
   try {
-    const response = await fetch('http://localhost:11434/v1/models')
+    const response = await fetch(`${url}/models`)
     const data = await response.json()
     return data
   } catch (error) {

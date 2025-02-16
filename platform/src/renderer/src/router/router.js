@@ -11,6 +11,7 @@ const scriptView = () => import('../view/ScriptView.vue')
 const Log = () => import('../view/Log.vue')
 const chatDeepSeek = () => import('../view/DeepSeekChatView.vue')
 const chat = () => import('../view/ChatView.vue')
+const settings = ()=>import('../view/Setting.vue')
 const routes = [
   {
     path: '/',
@@ -51,6 +52,10 @@ const routes = [
     path: '/chat',
     name: 'chat',
     component: chat
+  },{
+    path: '/settings',
+    name: 'settings',
+    component: settings
   }
 ]
 

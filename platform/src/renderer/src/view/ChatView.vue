@@ -4,11 +4,12 @@
     <div class="border-b bg-white shadow-sm">
       <div class="max-w-full mx-auto py-4 px-4 sm:px-6">
         <PageHeader header="大模型对话" />
-        <div>
+        <div class="flex justify-between items-center">
           <el-select v-model="usingModel" placeholder="请选择大模型">
             <el-option v-for="item in ableModel" :key="item.id" :label="item.id" :value="item.id">
             </el-option>
           </el-select>
+          <el-button class="ml-4" @click="cleanMessage" type="info"  round >开始新聊天</el-button>
         </div>
       </div>
     </div>
@@ -89,7 +90,7 @@
   </div>
 </template>
 <script setup>
-import { reactive, ref } from 'vue'
+import { reactive, ref, onMounted, watch } from 'vue'
 import { useConfigStore } from '../store'
 import { marked } from 'marked'
 import hljs from 'highlight.js'
@@ -99,6 +100,15 @@ import { Search } from '@element-plus/icons-vue'
 
 const configStore = useConfigStore()
 
+const usingUrl = ref(configStore.data.apiUrl)
+const ableModel = ref(configStore.data.ableModel)
+const usingModel = ref(configStore.data.usingModel)
+const data = reactive({
+  inputMessage: '',
+  messages: [],
+  loading: false,
+  isR1: false
+})
 // 安全的字符串转换函数
 const safeString = (value) => {
   if (value === null || value === undefined) return ''
@@ -116,32 +126,41 @@ const renderer = new marked.Renderer()
 // 处理代码块渲染
 renderer.code = (code, language) => {
   try {
-    // 确保code是字符串
-    code = safeString(code)
-    language = safeString(language)
+    // 如果 code 是对象，则提取 text 属性
+    if (typeof code === 'object' && code.text) {
+      code = code.text;
+    }
+    // 确保 code 是字符串，如果 code 是对象，则将其转换为 JSON 字符串
+    if (typeof code !== 'string') {
+      code = JSON.stringify(code, null, 2);
+    }
+    code = safeString(code);
 
-    let highlighted = code
+    // 确保 language 是字符串，如果未定义或无效，则使用默认值 'text'
+    language = safeString(language).trim() || 'text';
+
+    let highlighted = code;
     if (language && hljs.getLanguage(language)) {
       try {
-        highlighted = hljs.highlight(code, { language }).value
+        highlighted = hljs.highlight(code, { language }).value;
       } catch (e) {
-        highlighted = escapeHtml(code)
+        highlighted = escapeHtml(code);
       }
     } else {
-      highlighted = escapeHtml(code)
+      highlighted = escapeHtml(code);
     }
 
     return `
       <div class="code-block-wrapper">
         <div class="code-block-header">
-          <span class="code-language">${language || 'text'}</span>
-          <button class="copy-button" onclick="copyCodeToClipboard(this)">Copy</button>
+          <span class="code-language">${language}</span>
+          <button class="copy-button">Copy</button>
         </div>
-        <pre class="code-block"><code class="${language ? `language-${language}` : ''}">${highlighted}</code></pre>
+        <pre class="code-block"><code class="language-${language}">${highlighted}</code></pre>
       </div>
-    `
+    `;
   } catch (error) {
-    return `<pre class="code-block"><code>${escapeHtml(code)}</code></pre>`
+    return `<pre class="code-block"><code>${escapeHtml(code)}</code></pre>`;
   }
 }
 // 段落渲染
@@ -224,65 +243,74 @@ const renderMarkdown = (content) => {
     return escapeHtml(content)
   }
 }
-const data = reactive({
-  inputMessage: '',
-  messages: [],
-  loading: false,
-  isR1: false
-})
+
 // 复制代码功能
-window.copyCodeToClipboard = function (button) {
-  const codeBlock = button.closest('.code-block-wrapper').querySelector('code')
-  const code = codeBlock.textContent
-  // 使用通过 contextBridge 暴露的 API
-  if (window.electron.electronAPI) {
+const copyCodeToClipboard = (button) => {
+  const codeBlock = button.closest('.code-block-wrapper').querySelector('code');
+  const code = codeBlock.textContent;
+  if (window.electron?.electronAPI) {
     window.electron.electronAPI
       .copyToClipboard(code)
       .then(() => {
-        button.textContent = 'Copied!'
-        button.disabled = true
+        button.textContent = 'Copied!';
+        button.disabled = true;
         setTimeout(() => {
-          button.textContent = 'Copy'
-          button.disabled = false
-        }, 2000)
+          button.textContent = 'Copy';
+          button.disabled = false;
+        }, 2000);
       })
       .catch((err) => {
-        console.error('Failed to copy:', err)
-        button.textContent = 'Error'
+        console.error('Failed to copy:', err);
+        button.textContent = 'Error';
         setTimeout(() => {
-          button.textContent = 'Copy'
-        }, 2000)
-      })
+          button.textContent = 'Copy';
+        }, 2000);
+      });
   } else {
-    // 降级方案：如果不在 Electron 环境中，尝试使用普通的 clipboard API
     navigator.clipboard
       .writeText(code)
       .then(() => {
-        button.textContent = 'Copied!'
-        button.disabled = true
+        button.textContent = 'Copied!';
+        button.disabled = true;
         setTimeout(() => {
-          button.textContent = 'Copy'
-          button.disabled = false
-        }, 2000)
+          button.textContent = 'Copy';
+          button.disabled = false;
+        }, 2000);
       })
       .catch((err) => {
-        console.error('Failed to copy:', err)
-        button.textContent = 'Error'
+        console.error('Failed to copy:', err);
+        button.textContent = 'Error';
         setTimeout(() => {
-          button.textContent = 'Copy'
-        }, 2000)
-      })
+          button.textContent = 'Copy';
+        }, 2000);
+      });
   }
-}
+};
 
-const ableModel = ref(configStore.ableModel)
-const usingModel = ref(configStore.usingModel)
-const getLocalModel = async () => {
-  const res = await window.electron.ipcRenderer.invoke('get-local-model-list')
-  ableModel.value = res.data
-}
-getLocalModel()
+// 在组件挂载后绑定事件
+onMounted(() => {
+  const bindCopyButtons = () => {
+    document.querySelectorAll('.copy-button').forEach((button) => {
+      button.removeEventListener('click', copyCodeToClipboard); // 先移除旧的事件监听器
+      button.addEventListener('click', () => copyCodeToClipboard(button));
+    });
+  };
+
+  // 初始绑定
+  bindCopyButtons();
+
+  // 监听消息变化，重新绑定事件
+  watch(() => data.messages, bindCopyButtons, { deep: true });
+});
+
 const handleSend = () => {
+  if (data.loading) {
+    ElMessage({
+      message: '正在接收模型输出，请稍后再试',
+      type: 'warning'
+    })
+    return
+  }
   if (usingModel.value == null || usingModel.value == undefined || usingModel.value == '') {
     ElMessage({
       message: '请选择模型',
@@ -385,6 +413,7 @@ const sendMessageR1 = async () => {
         // 恢复原始输入
         data.inputMessage = originalInput
       }
+      console.log(lastMessage)
     })
 
     // 创建一个深拷贝，确保数据的纯净性
@@ -392,14 +421,20 @@ const sendMessageR1 = async () => {
       role: msg.role,
       content: msg.content
     }))
-
+    console.log(  usingModel.value,
+      usingUrl.value,
+      configStore.getData().value)
     // 向主线程发送消息数组
     await window.electron.ipcRenderer.invoke(
       'chat-local-reasoner',
       cleanSendMessages,
-      usingModel.value
+      usingModel.value,
+      usingUrl.value,
+      configStore.getData().value
     )
+    
   } catch (error) {
+    console.log(error)
     const lastMessage = data.messages[data.messages.length - 1]
     if (lastMessage && (!lastMessage.content || lastMessage.content.trim() === '')) {
       data.messages[data.messages.lastIndexOf].content = '发送消息失败'
@@ -411,7 +446,32 @@ const sendMessageR1 = async () => {
     cleanupListeners()
   }
 }
+
+const getLocalModel = async () => {
+  console.log(usingUrl.value)
+  const res = await window.electron.ipcRenderer.invoke('get-local-model-list', usingUrl.value)
+  ableModel.value = res.data
+  // 设置pinia中的数据
+  configStore.setLocalModelList(res.data)
+}
+const saveSelectModel = () => {
+  // 保存设置到 pinia
+  configStore.setLocalUsingModel(usingModel.value)
+}
+getLocalModel()
+watch(usingModel, saveSelectModel, { deep: true })
+// 清理所有聊天信息
+const cleanMessage = () => {
+  // 清空消息列表
+  data.messages = [];
+  // 清空输入框内容
+  data.inputMessage = '';
+  // 重置加载状态
+  data.loading = false;
+  // 如果需要清空其他相关状态，可以在这里添加
+};
 </script>
+
 <style>
 /* Obsidian 样式 */
 .markdown-body {
