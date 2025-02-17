@@ -373,7 +373,7 @@ async function processStreamContent(content, event, state) {
 // 主处理函数
 ipcMain.handle('chat-local-reasoner', async (event, chatContent, chatModel,usingUrl,data) => {
   console.log('Starting local chat with model:', chatModel)
-  
+
   // 在函数内部创建状态对象
   const state = {
     buffer: '',

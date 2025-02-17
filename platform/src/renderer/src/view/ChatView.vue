@@ -9,7 +9,7 @@
             <el-option v-for="item in ableModel" :key="item.id" :label="item.id" :value="item.id">
             </el-option>
           </el-select>
-          <el-button class="ml-4" @click="cleanMessage" type="info"  round >开始新聊天</el-button>
+          <el-button class="ml-4" @click="cleanMessage" type="info" round>开始新聊天</el-button>
         </div>
       </div>
     </div>
@@ -90,7 +90,7 @@
   </div>
 </template>
 <script setup>
-import { reactive, ref, onMounted, watch } from 'vue'
+import { reactive, ref, onMounted, watch, toRaw } from 'vue'
 import { useConfigStore } from '../store'
 import { marked } from 'marked'
 import hljs from 'highlight.js'
@@ -103,6 +103,7 @@ const configStore = useConfigStore()
 const usingUrl = ref(configStore.data.apiUrl)
 const ableModel = ref(configStore.data.ableModel)
 const usingModel = ref(configStore.data.usingModel)
+const modelData =ref(configStore.data)
 const data = reactive({
   inputMessage: '',
   messages: [],
@@ -128,26 +129,26 @@ renderer.code = (code, language) => {
   try {
     // 如果 code 是对象，则提取 text 属性
     if (typeof code === 'object' && code.text) {
-      code = code.text;
+      code = code.text
     }
     // 确保 code 是字符串，如果 code 是对象，则将其转换为 JSON 字符串
     if (typeof code !== 'string') {
-      code = JSON.stringify(code, null, 2);
+      code = JSON.stringify(code, null, 2)
     }
-    code = safeString(code);
+    code = safeString(code)
 
     // 确保 language 是字符串，如果未定义或无效，则使用默认值 'text'
-    language = safeString(language).trim() || 'text';
+    language = safeString(language).trim() || 'text'
 
-    let highlighted = code;
+    let highlighted = code
     if (language && hljs.getLanguage(language)) {
       try {
-        highlighted = hljs.highlight(code, { language }).value;
+        highlighted = hljs.highlight(code, { language }).value
       } catch (e) {
-        highlighted = escapeHtml(code);
+        highlighted = escapeHtml(code)
       }
     } else {
-      highlighted = escapeHtml(code);
+      highlighted = escapeHtml(code)
     }
 
     return `
@@ -158,9 +159,9 @@ renderer.code = (code, language) => {
         </div>
         <pre class="code-block"><code class="language-${language}">${highlighted}</code></pre>
       </div>
-    `;
+    `
   } catch (error) {
-    return `<pre class="code-block"><code>${escapeHtml(code)}</code></pre>`;
+    return `<pre class="code-block"><code>${escapeHtml(code)}</code></pre>`
   }
 }
 // 段落渲染
@@ -246,62 +247,62 @@ const renderMarkdown = (content) => {
 
 // 复制代码功能
 const copyCodeToClipboard = (button) => {
-  const codeBlock = button.closest('.code-block-wrapper').querySelector('code');
-  const code = codeBlock.textContent;
+  const codeBlock = button.closest('.code-block-wrapper').querySelector('code')
+  const code = codeBlock.textContent
   if (window.electron?.electronAPI) {
     window.electron.electronAPI
       .copyToClipboard(code)
       .then(() => {
-        button.textContent = 'Copied!';
-        button.disabled = true;
+        button.textContent = 'Copied!'
+        button.disabled = true
         setTimeout(() => {
-          button.textContent = 'Copy';
-          button.disabled = false;
-        }, 2000);
+          button.textContent = 'Copy'
+          button.disabled = false
+        }, 2000)
       })
       .catch((err) => {
-        console.error('Failed to copy:', err);
-        button.textContent = 'Error';
+        console.error('Failed to copy:', err)
+        button.textContent = 'Error'
         setTimeout(() => {
-          button.textContent = 'Copy';
-        }, 2000);
-      });
+          button.textContent = 'Copy'
+        }, 2000)
+      })
   } else {
     navigator.clipboard
       .writeText(code)
       .then(() => {
-        button.textContent = 'Copied!';
-        button.disabled = true;
+        button.textContent = 'Copied!'
+        button.disabled = true
         setTimeout(() => {
-          button.textContent = 'Copy';
-          button.disabled = false;
-        }, 2000);
+          button.textContent = 'Copy'
+          button.disabled = false
+        }, 2000)
       })
       .catch((err) => {
-        console.error('Failed to copy:', err);
-        button.textContent = 'Error';
+        console.error('Failed to copy:', err)
+        button.textContent = 'Error'
         setTimeout(() => {
-          button.textContent = 'Copy';
-        }, 2000);
-      });
+          button.textContent = 'Copy'
+        }, 2000)
+      })
   }
-};
+}
 
 // 在组件挂载后绑定事件
 onMounted(() => {
   const bindCopyButtons = () => {
     document.querySelectorAll('.copy-button').forEach((button) => {
-      button.removeEventListener('click', copyCodeToClipboard); // 先移除旧的事件监听器
-      button.addEventListener('click', () => copyCodeToClipboard(button));
-    });
-  };
+      button.removeEventListener('click', copyCodeToClipboard) // 先移除旧的事件监听器
+      button.addEventListener('click', () => copyCodeToClipboard(button))
+    })
+  }
 
   // 初始绑定
-  bindCopyButtons();
+  bindCopyButtons()
 
   // 监听消息变化，重新绑定事件
-  watch(() => data.messages, bindCopyButtons, { deep: true });
-});
+  watch(() => data.messages, bindCopyButtons, { deep: true })
+})
 
 const handleSend = () => {
   if (data.loading) {
@@ -421,18 +422,15 @@ const sendMessageR1 = async () => {
       role: msg.role,
       content: msg.content
     }))
-    console.log(  usingModel.value,
-      usingUrl.value,
-      configStore.getData().value)
+    console.log(toRaw(modelData.value))
     // 向主线程发送消息数组
     await window.electron.ipcRenderer.invoke(
       'chat-local-reasoner',
       cleanSendMessages,
       usingModel.value,
       usingUrl.value,
-      configStore.getData().value
+      toRaw(modelData.value)
     )
-    
   } catch (error) {
     console.log(error)
     const lastMessage = data.messages[data.messages.length - 1]
@@ -463,13 +461,13 @@ watch(usingModel, saveSelectModel, { deep: true })
 // 清理所有聊天信息
 const cleanMessage = () => {
   // 清空消息列表
-  data.messages = [];
+  data.messages = []
   // 清空输入框内容
-  data.inputMessage = '';
+  data.inputMessage = ''
   // 重置加载状态
-  data.loading = false;
+  data.loading = false
   // 如果需要清空其他相关状态，可以在这里添加
-};
+}
 </script>
 
 <style>
